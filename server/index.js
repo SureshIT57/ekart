@@ -26,15 +26,21 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, mongo: mongoose.connection.readyState === 1 });
 });
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => {
-    app.listen(PORT, "0.0.0.0");
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("listening on", PORT);
+});
+
+async function connectMongo() {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log("mongo connected");
+  } catch (err) {
+    console.error("mongo connect failed", err.message);
+    setTimeout(connectMongo, 5000);
+  }
+}
+
+connectMongo();
