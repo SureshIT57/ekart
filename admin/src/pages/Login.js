@@ -15,7 +15,17 @@ export default function Login() {
       await login(email, password);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      const status = err.response?.status;
+      const apiUrl = err.config?.baseURL || "";
+      if (!err.response) {
+        setError(`Cannot reach API (${apiUrl}). Is the backend deployed?`);
+      } else if (status === 404) {
+        setError(
+          `Login route missing on ${apiUrl}. This site is not talking to the Ekart API.`
+        );
+      } else {
+        setError(err.response?.data?.message || "Login failed");
+      }
     }
   };
 

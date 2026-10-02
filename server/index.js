@@ -1,9 +1,11 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 const authRoutes = require("./routes/auth");
 const productRoutes = require("./routes/products");
 const orderRoutes = require("./routes/orders");
 const userRoutes = require("./routes/users");
+const User = require("./models/User");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -68,10 +70,33 @@ async function connectMongo() {
   try {
     await mongoose.connect(MONGODB_URI);
     console.log("mongo connected");
+    await ensureDefaultAdmin();
   } catch (err) {
     console.error("mongo connect failed", err.message, redactMongoUri(MONGODB_URI));
     setTimeout(connectMongo, 5000);
   }
+}
+
+async function ensureDefaultAdmin() {
+  const email = process.env.ADMIN_EMAIL || "admin@ekart.local";
+  const password = process.env.ADMIN_PASSWORD || "admin123";
+  const hashed = await bcrypt.hash(password, 10);
+  let user = await User.findOne({ email });
+  if (!user) {
+    await User.create({
+      name: "Admin",
+      email,
+      password: hashed,
+      role: "admin",
+      address: "Store",
+    });
+    console.log("default admin created", email);
+    return;
+  }
+  user.password = hashed;
+  user.role = "admin";
+  await user.save();
+  console.log("default admin ready", email);
 }
 
 connectMongo();
